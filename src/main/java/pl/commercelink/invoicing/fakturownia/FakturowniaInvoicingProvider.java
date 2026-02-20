@@ -142,16 +142,6 @@ public class FakturowniaInvoicingProvider implements InvoicingProvider {
         return result != null ? toInvoice(result, invoiceType) : null;
     }
 
-    @Override
-    public Invoice fetchInvoiceWithPositions(String invoiceId, InvoiceDirection invoiceType) {
-        String url = String.format("/invoices/%s.json?api_token=%s", invoiceId, apiKey);
-        GetInvoiceResult result = httpClient.fetch(url, GetInvoiceResult.class);
-        if (result == null) {
-            return null;
-        }
-        return toInvoice(result, invoiceType);
-    }
-
     private GetInvoiceResult fetchInvoiceResultByNumber(String invoiceNumber) {
         String url = String.format("/invoices.json?api_token=%s&query=%s", apiKey, invoiceNumber);
         List<GetInvoiceResult> invoices = httpClient.fetchList(url, GetInvoiceResult.class);
