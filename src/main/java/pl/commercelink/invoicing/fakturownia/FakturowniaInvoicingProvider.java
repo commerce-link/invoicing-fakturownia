@@ -143,23 +143,6 @@ public class FakturowniaInvoicingProvider implements InvoicingProvider {
     }
 
     @Override
-    public Invoice fetchInvoiceByNumber(String invoiceNumber, InvoiceDirection invoiceType) {
-        String url = InvoiceDirection.Sale == invoiceType ?
-                String.format("/invoices.json?api_token=%s&query=%s", apiKey, invoiceNumber) :
-                String.format("/invoices.json?api_token=%s&income=no&query=%s", apiKey, invoiceNumber);
-        List<GetInvoiceResult> invoices = httpClient.fetchList(url, GetInvoiceResult.class);
-        return findExactMatch(invoices, invoiceNumber, invoiceType);
-    }
-
-    private Invoice findExactMatch(List<GetInvoiceResult> invoices, String invoiceNumber, InvoiceDirection invoiceType) {
-        return invoices.stream()
-                .filter(inv -> invoiceNumber.equals(inv.getNumber()))
-                .findFirst()
-                .map(i -> toInvoice(i, invoiceType))
-                .orElse(null);
-    }
-
-    @Override
     public Invoice fetchInvoiceWithPositions(String invoiceId, InvoiceDirection invoiceType) {
         String url = String.format("/invoices/%s.json?api_token=%s", invoiceId, apiKey);
         GetInvoiceResult result = httpClient.fetch(url, GetInvoiceResult.class);
