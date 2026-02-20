@@ -10,7 +10,8 @@ This library registers itself for `ServiceLoader` discovery. Add it to your clas
 
 ## Configuration Fields
 
-| Key      | Label   | Type     | Required |
-|----------|---------|----------|----------|
-| `apiUrl` | API URL | TEXT     | yes      |
-| `apiKey` | API Key | PASSWORD | yes      |
+| Key            | Label         | Type     | Required |
+|----------------|---------------|----------|----------|
+| `apiUrl`       | API URL       | TEXT     | yes      |
+| `apiKey`       | API Key       | PASSWORD | yes      |
+| `departmentId` | Department ID | TEXT     | yes      |
