@@ -4,7 +4,6 @@ import pl.commercelink.invoicing.api.InvoicingProvider;
 import pl.commercelink.invoicing.api.*;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -149,39 +148,18 @@ public class FakturowniaInvoicingProvider implements InvoicingProvider {
     }
 
     @Override
-    public List<Invoice> fetchInvoices(LocalDate dateFrom, LocalDate dateTo, InvoiceDirection invoiceType) {
-        RequestBuilder requestBuilder = new RequestBuilder(apiKey)
-                .setPeriod("more")
-                .setDateFrom(dateFrom)
-                .setDateTo(dateTo)
-                .setIncludePositions(false);
-
-        if (invoiceType == InvoiceDirection.Purchase) {
-            requestBuilder.setIncome("no");
+    public List<Invoice> fetchInvoicesByOrderId(String orderId, InvoiceDirection invoiceType) {
+        String url = invoiceType == InvoiceDirection.Sale
+                ? String.format("/invoices.json?api_token=%s&query=%s", apiKey, orderId)
+                : String.format("/invoices.json?api_token=%s&income=no&query=%s", apiKey, orderId);
+        List<GetInvoiceResult> invoices = httpClient.fetchList(url, GetInvoiceResult.class);
+        if (invoices == null || invoices.isEmpty()) {
+            return List.of();
         }
-
-        return fetchInvoices(requestBuilder, invoiceType);
-    }
-
-    private List<Invoice> fetchInvoices(RequestBuilder requestBuilder, InvoiceDirection invoiceType) {
-        List<GetInvoiceResult> allInvoices = new ArrayList<>();
-        int currentPage = 1;
-        int totalInvoices;
-
-        do {
-            requestBuilder.setPage(currentPage);
-            String url = requestBuilder.build();
-
-            List<GetInvoiceResult> invoices = httpClient.fetchList(url, GetInvoiceResult.class);
-
-            totalInvoices = (invoices != null) ? invoices.size() : 0;
-            if (totalInvoices > 0) {
-                allInvoices.addAll(invoices);
-            }
-            currentPage++;
-        } while (totalInvoices == requestBuilder.perPage);
-
-        return allInvoices.stream().map(i -> toInvoice(i, invoiceType)).toList();
+        return invoices.stream()
+                .filter(inv -> orderId.equals(inv.getOid()))
+                .map(inv -> toInvoice(inv, invoiceType))
+                .toList();
     }
 
     private Invoice toInvoice(GetInvoiceResult i, InvoiceDirection type) {
@@ -329,104 +307,6 @@ public class FakturowniaInvoicingProvider implements InvoicingProvider {
 
         String prefix = taxId.substring(0, 2).toUpperCase();
         return euCountryCodes.contains(prefix);
-    }
-
-    private static class RequestBuilder {
-
-        private final String apiKey;
-        private LocalDate dateFrom;
-        private LocalDate dateTo;
-        private int page = 1;
-        private int perPage = 100;
-        private boolean includePositions = false;
-        private String period;
-        private String searchDateType = "transaction_date";
-        private String income = null;
-        private String kind = null;
-        private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-        public RequestBuilder(String apiKey) {
-            this.apiKey = apiKey;
-        }
-
-        public RequestBuilder setPeriod(String period) {
-            this.period = period;
-            return this;
-        }
-
-        public RequestBuilder setDateFrom(LocalDate dateFrom) {
-            this.dateFrom = dateFrom;
-            return this;
-        }
-
-        public RequestBuilder setDateTo(LocalDate dateTo) {
-            this.dateTo = dateTo;
-            return this;
-        }
-
-        public RequestBuilder setPage(int page) {
-            this.page = page;
-            return this;
-        }
-
-        public RequestBuilder setPerPage(int perPage) {
-            this.perPage = perPage;
-            return this;
-        }
-
-        public RequestBuilder setIncludePositions(boolean includePositions) {
-            this.includePositions = includePositions;
-            return this;
-        }
-
-        public RequestBuilder setSearchDateType(String searchDateType) {
-            this.searchDateType = searchDateType;
-            return this;
-        }
-
-        public RequestBuilder setIncome(String income) {
-            this.income = income;
-            return this;
-        }
-
-        public RequestBuilder setKind(String kind) {
-            this.kind = kind;
-            return this;
-        }
-
-        public String build() {
-            StringBuilder urlBuilder = new StringBuilder("/invoices.json?api_token=" + apiKey);
-
-            if (period != null && !period.isEmpty()) {
-                urlBuilder.append("&period=").append(period);
-            }
-            if (dateFrom != null) {
-                urlBuilder.append("&date_from=").append(dateFrom.format(formatter));
-            }
-            if (dateTo != null) {
-                urlBuilder.append("&date_to=").append(dateTo.format(formatter));
-            }
-            if (page > 0) {
-                urlBuilder.append("&page=").append(page);
-            }
-            if (perPage > 0) {
-                urlBuilder.append("&per_page=").append(perPage);
-            }
-            if (includePositions) {
-                urlBuilder.append("&include_positions=").append(includePositions);
-            }
-            if (searchDateType != null && !searchDateType.isEmpty()) {
-                urlBuilder.append("&search_date_type=").append(searchDateType);
-            }
-            if (income != null) {
-                urlBuilder.append("&income=").append(income);
-            }
-            if (kind != null) {
-                urlBuilder.append("&kind=").append(kind);
-            }
-
-            return urlBuilder.toString();
-        }
     }
 
 }
