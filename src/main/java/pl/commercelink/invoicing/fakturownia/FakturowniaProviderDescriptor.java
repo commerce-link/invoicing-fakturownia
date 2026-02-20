@@ -23,7 +23,8 @@ public class FakturowniaProviderDescriptor implements InvoicingProviderDescripto
     public List<ProviderField> configurationFields() {
         return List.of(
                 new ProviderField("apiUrl", "API URL", ProviderField.FieldType.TEXT, true, "https://example.fakturownia.pl"),
-                new ProviderField("apiKey", "API Key", ProviderField.FieldType.PASSWORD, true, "")
+                new ProviderField("apiKey", "API Key", ProviderField.FieldType.PASSWORD, true, ""),
+                new ProviderField("departmentId", "Department ID", ProviderField.FieldType.TEXT, true, "")
         );
     }
 
@@ -31,6 +32,7 @@ public class FakturowniaProviderDescriptor implements InvoicingProviderDescripto
     public InvoicingProvider create(Map<String, String> configuration) {
         String apiUrl = configuration.get("apiUrl");
         String apiKey = configuration.get("apiKey");
-        return new FakturowniaInvoicingProvider(apiUrl, apiKey);
+        String departmentId = configuration.get("departmentId");
+        return new FakturowniaInvoicingProvider(apiUrl, apiKey, departmentId);
     }
 }

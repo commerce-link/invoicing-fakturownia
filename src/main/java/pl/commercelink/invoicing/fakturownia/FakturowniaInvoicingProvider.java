@@ -16,10 +16,12 @@ public class FakturowniaInvoicingProvider implements InvoicingProvider {
 
     private final FakturowniaHttpClient httpClient;
     private final String apiKey;
+    private final String departmentId;
 
-    public FakturowniaInvoicingProvider(String apiUrl, String apiKey) {
+    public FakturowniaInvoicingProvider(String apiUrl, String apiKey, String departmentId) {
         this.httpClient = new FakturowniaHttpClient(apiUrl);
         this.apiKey = apiKey;
+        this.departmentId = departmentId;
     }
 
     @Override
@@ -101,7 +103,7 @@ public class FakturowniaInvoicingProvider implements InvoicingProvider {
             invoice.setSplitPayment("0");
         }
 
-        invoice.setDepartmentId(request.departmentId());
+        invoice.setDepartmentId(this.departmentId);
 
         if (billingParty.hasTaxId()) {
             invoice.setBuyerCompany("1");
