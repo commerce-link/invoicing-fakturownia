@@ -3,6 +3,8 @@ package pl.commercelink.invoicing.fakturownia;
 import pl.commercelink.invoicing.api.InvoicingProvider;
 import pl.commercelink.invoicing.api.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -13,6 +15,11 @@ import java.util.stream.Collectors;
     https://github.com/fakturownia/API?tab=readme-ov-file#f1
  */
 public class FakturowniaInvoicingProvider implements InvoicingProvider {
+
+    private static final String STATUS_PAID = "paid";
+    // the approval of a cost invoice is its own field, next to the payment status
+    private static final String APPROVAL_RECEIVED = "received";
+    private static final String APPROVAL_ACCEPTED = "accepted";
 
     private final FakturowniaHttpClient httpClient;
     private final String apiKey;
@@ -164,10 +171,33 @@ public class FakturowniaInvoicingProvider implements InvoicingProvider {
                 .toList();
     }
 
+    @Override
+    public List<Invoice> fetchPurchaseInvoicesAwaitingApprovalByOrderId(String orderId) {
+        String url = String.format("/invoices.json?api_token=%s&income=no&approval_status=%s&query=%s",
+                apiKey, APPROVAL_RECEIVED, URLEncoder.encode(orderId, StandardCharsets.UTF_8));
+        List<GetInvoiceResult> invoices = httpClient.fetchList(url, GetInvoiceResult.class);
+        if (invoices == null) {
+            return List.of();
+        }
+        return invoices.stream()
+                .filter(inv -> orderId.equals(inv.getOid()))
+                // the list ignores a filter value it does not know and then returns invoices in every status
+                .filter(inv -> APPROVAL_RECEIVED.equals(inv.getApprovalStatus()))
+                .map(inv -> toInvoice(inv, InvoiceDirection.Purchase))
+                .toList();
+    }
+
+    @Override
+    public void approvePurchaseInvoice(String invoiceId) {
+        // changes the approval only: the payment status of the invoice stays as it is
+        httpClient.post(String.format("/invoices/%s/change_status.json?api_token=%s&status=%s", invoiceId, apiKey, APPROVAL_ACCEPTED));
+    }
+
     private Invoice toInvoice(GetInvoiceResult i, InvoiceDirection type) {
 
         double exchangeRate = i.getExchangeRate() > 0 ? i.getExchangeRate() : 1.0;
         String currency = i.getCurrency();
+        boolean paid = STATUS_PAID.equalsIgnoreCase(i.getStatus());
 
         return new Invoice(
                 String.valueOf(i.getId()),
@@ -177,11 +207,12 @@ public class FakturowniaInvoicingProvider implements InvoicingProvider {
                 i.getViewUrl(),
                 currency,
                 exchangeRate,
-                "paid".equalsIgnoreCase(i.getStatus()),
+                paid,
                 isNotBlank(i.getPaymentTo()) ? LocalDate.parse(i.getPaymentTo()) : null,
                 toInvoicePositions(i, currency, exchangeRate),
                 toSeller(i, type),
-                toBuyer(i, type)
+                toBuyer(i, type),
+                !paid && i.getPaid() > 0
         );
     }
 

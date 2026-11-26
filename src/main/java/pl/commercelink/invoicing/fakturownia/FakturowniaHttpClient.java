@@ -45,6 +45,23 @@ class FakturowniaHttpClient {
         }
     }
 
+    void post(String endpoint) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + endpoint))
+                    .timeout(REQUEST_TIMEOUT)
+                    .header("Accept", "application/json")
+                    .POST(HttpRequest.BodyPublishers.noBody())
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() / 100 != 2) {
+                throw new RuntimeException("HTTP " + response.statusCode() + ": " + response.body());
+            }
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     <T> T fetch(String endpoint, Class<T> responseType) {
         try {
             HttpRequest request = HttpRequest.newBuilder()

@@ -543,6 +543,10 @@ class GetInvoiceResult {
         return status;
     }
 
+    String getApprovalStatus() {
+        return approvalStatus;
+    }
+
     String getOid() {
         return oid;
     }
