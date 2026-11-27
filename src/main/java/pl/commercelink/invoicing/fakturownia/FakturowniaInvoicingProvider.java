@@ -3,8 +3,6 @@ package pl.commercelink.invoicing.fakturownia;
 import pl.commercelink.invoicing.api.InvoicingProvider;
 import pl.commercelink.invoicing.api.*;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -172,23 +170,7 @@ public class FakturowniaInvoicingProvider implements InvoicingProvider {
     }
 
     @Override
-    public List<Invoice> fetchPurchaseInvoicesAwaitingApprovalByOrderId(String orderId) {
-        String url = String.format("/invoices.json?api_token=%s&income=no&approval_status=%s&query=%s",
-                apiKey, APPROVAL_RECEIVED, URLEncoder.encode(orderId, StandardCharsets.UTF_8));
-        List<GetInvoiceResult> invoices = httpClient.fetchList(url, GetInvoiceResult.class);
-        if (invoices == null) {
-            return List.of();
-        }
-        return invoices.stream()
-                .filter(inv -> orderId.equals(inv.getOid()))
-                // the list ignores a filter value it does not know and then returns invoices in every status
-                .filter(inv -> APPROVAL_RECEIVED.equals(inv.getApprovalStatus()))
-                .map(inv -> toInvoice(inv, InvoiceDirection.Purchase))
-                .toList();
-    }
-
-    @Override
-    public void approvePurchaseInvoice(String invoiceId) {
+    public void approveInvoiceById(String invoiceId, InvoiceDirection direction) {
         // changes the approval only: the payment status of the invoice stays as it is
         httpClient.post(String.format("/invoices/%s/change_status.json?api_token=%s&status=%s", invoiceId, apiKey, APPROVAL_ACCEPTED));
     }
@@ -212,7 +194,8 @@ public class FakturowniaInvoicingProvider implements InvoicingProvider {
                 toInvoicePositions(i, currency, exchangeRate),
                 toSeller(i, type),
                 toBuyer(i, type),
-                !paid && i.getPaid() > 0
+                !paid && i.getPaid() > 0,
+                !APPROVAL_RECEIVED.equals(i.getApprovalStatus())
         );
     }
 
